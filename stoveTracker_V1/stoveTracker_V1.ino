@@ -81,12 +81,12 @@ void setup(void) {
   delay(500);
 }
 
-const unsigned long intervalNTP = 5000;     // Request NTP time every 5 seconds
+const unsigned long intervalNTP = 30000;     // Request NTP time every 5 seconds
 unsigned long prevNTP = 0;
 unsigned long lastNTPResponse = millis();
 uint32_t timeUNIX = 0;                      // The most recent timestamp received from the time server
 
-const unsigned long intervalTemp = 10000;   // Do a temperature measurement every minute
+const unsigned long intervalTemp = 5000;   // Do a temperature measurement every minute
 unsigned long prevTemp = 0;
 bool tmpRequested = false;
 
