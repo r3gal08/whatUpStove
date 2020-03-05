@@ -47,7 +47,7 @@ ESP8266WiFiMulti wifiMulti;
 
 const char *OTAName = "ESP8266";            // A name and a password for the OTA service
 const char *OTAPassword = "esp8266";
-const char* mdnsName = "esp8266"; // Domain name for the mDNS responder
+const char* mdnsName = "whatupstove?"; // Domain name for the mDNS responder
 
 // Create an instance of the WiFiUDP class to send and receive UDP messages
 WiFiUDP UDP;          
@@ -75,9 +75,6 @@ void setup(void) {
   bmp.begin();
   Serial.begin(115200);
   delay(1000);
-
-  //File tempLog = SPIFFS.open("/temp.csv", "a"); // Write the time and the temperature to the csv file
-  //SPIFFS.remove("/temp.csv");
   
   startWiFi();                 // Start a Wi-Fi access point, and try to connect to some given access points. Then wait for either an AP or STA connection
   startOTA();                  // Start the OTA service
@@ -99,7 +96,7 @@ unsigned long prevNTP = 0;
 unsigned long lastNTPResponse = millis();
 uint32_t timeUNIX = 0;                      // The most recent timestamp received from the time server
 
-const unsigned long intervalTemp = 10000;   // Do a temperature measurement every minute
+const unsigned long intervalTemp = 60000;   // Do a temperature measurement every minute
 unsigned long prevTemp = 0;
 bool tmpRequested = false;
 
