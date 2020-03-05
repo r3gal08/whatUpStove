@@ -15,6 +15,9 @@
 #include <FS.h>
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BMP085_U.h>
 
 #ifndef STASSID
 #define STASSID "The Loft"
@@ -23,9 +26,13 @@
 
 #define ONE_HOUR 3600000UL
 
+// DHT11 variables
 #define DHTTYPE DHT11 
 #define dht_dpin 2
 DHT dht(dht_dpin, DHTTYPE); 
+
+// BMP180 Variables
+Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(10085);
 
 File fsUploadFile;                                    // a File variable to temporarily store the received file
 
@@ -58,21 +65,27 @@ unsigned long previousMillis = 0;    // will store last time DHT was updated
 const long interval = 3000; 
 
 // current temperature & humidity, updated in loop()
-float t = 0.0;
-float h = 0.0;
+float dht_t = 0.0;
+float dht_h = 0.0;
+float bmp_t = 0.0;
 
 void setup(void) {
   dht.begin();
+  delay(1000);
+  bmp.begin();
   Serial.begin(115200);
   delay(1000);
 
+  //File tempLog = SPIFFS.open("/temp.csv", "a"); // Write the time and the temperature to the csv file
+  //SPIFFS.remove("/temp.csv");
+  
   startWiFi();                 // Start a Wi-Fi access point, and try to connect to some given access points. Then wait for either an AP or STA connection
   startOTA();                  // Start the OTA service
   startSPIFFS();               // Start the SPIFFS and list all contents
   startMDNS();                 // Start the mDNS responder
   startServer();               // Start a HTTP server with a file read handler and an upload handler
   startUDP();                  // Start listening for UDP messages to port 123
-
+  
   WiFi.hostByName(ntpServerName, timeServerIP); // Get the IP address of the NTP server
   Serial.print("Time server IP:\t");
   Serial.println(timeServerIP);
@@ -81,17 +94,19 @@ void setup(void) {
   delay(500);
 }
 
-const unsigned long intervalNTP = 30000;     // Request NTP time every 5 seconds
+const unsigned long intervalNTP = ONE_HOUR;     // Request NTP time every hour
 unsigned long prevNTP = 0;
 unsigned long lastNTPResponse = millis();
 uint32_t timeUNIX = 0;                      // The most recent timestamp received from the time server
 
-const unsigned long intervalTemp = 5000;   // Do a temperature measurement every minute
+const unsigned long intervalTemp = 10000;   // Do a temperature measurement every minute
 unsigned long prevTemp = 0;
 bool tmpRequested = false;
 
 void loop(void) {
-unsigned long currentMillis = millis();
+  unsigned long currentMillis = millis();
+  sensors_event_t event;  // Get a new sensor event
+  bmp.getEvent(&event);
 
   if (currentMillis - prevNTP > intervalNTP) { // Request the time from the time server every hour
     prevNTP = currentMillis;
@@ -112,7 +127,7 @@ unsigned long currentMillis = millis();
 
   if (timeUNIX != 0) {
     if (currentMillis - prevTemp > intervalTemp) {  // Every minute, request the temperature
-      tmpRequested = true;
+      if(event.pressure) tmpRequested = true;
       prevTemp = currentMillis;
       Serial.println("Temperature requested");
     }
@@ -122,22 +137,32 @@ unsigned long currentMillis = millis();
       tmpRequested = false;
       
       // if temperature read failed, don't change t value (Celsius) TODO: Make this loop until a temperature is taken
-      float newT = dht.readTemperature();
-      if (isnan(newT)) {
+      float dhtT = dht.readTemperature();
+      float bmpT;
+      bmp.getTemperature(&bmpT); 
+      if ((isnan(dhtT)) || (isnan(bmpT))) {
         Serial.println("Failed to read from DHT sensor!");
       } else {
-        t = newT;
-        Serial.print("Loop val (t): ");
-        Serial.println(t);
+        dht_t = dhtT;
+        bmp_t = bmpT;
+        Serial.print("DHT11 (t): ");
+        Serial.println(dht_t);
+        Serial.print("BMP180 (t): ");
+        Serial.println(bmp_t);
       }
-      t = round(t * 100.0) / 100.0; // round temperature to 2 digits
-
+      dht_t = round(dht_t * 100.0) / 100.0; // round temperature to 2 digits
+      bmp_t = round(bmp_t * 100.0) / 100.0; // round temperature to 2 digits
+      
       Serial.printf("Appending temperature to file: %lu,", actualTime);
-      Serial.println(t);
+      Serial.print(dht_t);
+      Serial.print(",");
+      Serial.println(bmp_t);
       File tempLog = SPIFFS.open("/temp.csv", "a"); // Write the time and the temperature to the csv file
       tempLog.print(actualTime);
       tempLog.print(',');
-      tempLog.println(t);
+      tempLog.print(dht_t);
+      tempLog.print(',');
+      tempLog.println(bmp_t);  
       tempLog.close();
     }
   } else {                                    // If we didn't receive an NTP response yet, send another request
@@ -340,5 +365,4 @@ void sendNTPpacket(IPAddress& address) {
 inline int getSeconds(uint32_t UNIXTime) {
   return UNIXTime % 60;
 }
-
 
