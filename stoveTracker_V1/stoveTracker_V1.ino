@@ -26,6 +26,25 @@
 
 #define ONE_HOUR 3600000UL
 
+const char *ssid = STASSID;
+const char *password = STAPSK;
+
+// Note: Apparently OTANAME and mdnsName have to be the same (not case sensitive)
+const char *OTAName = "WHATUPSTOVE";      // A name and a password for the OTA service
+const char *OTAPassword = "esp8266";  //  "
+const char* mdnsName = "whatupstove";     // Domain name for the mDNS responder
+
+ESP8266WebServer server(80);  // Create WebServer object on port 80
+ESP8266WiFiMulti wifiMulti;   // Create an instance of the ESP8266WiFiMulti class, called 'wifiMulti'  
+WiFiUDP UDP;                  // Create an instance of the WiFiUDP class to send and receive UDP messages      
+         
+IPAddress timeServerIP;                       // The time.nist.gov NTP server's IP address
+const char* ntpServerName = "time.nist.gov";
+const int NTP_PACKET_SIZE = 48;               // NTP time stamp is in the first 48 bytes of the message
+byte packetBuffer[NTP_PACKET_SIZE];           // A buffer to hold incoming and outgoing packets
+
+File fsUploadFile;  // a File variable to temporarily store the received file
+
 // DHT11 variables
 #define DHTTYPE DHT11 
 #define dht_dpin 2
@@ -33,29 +52,6 @@ DHT dht(dht_dpin, DHTTYPE);
 
 // BMP180 Variables
 Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(10085);
-
-File fsUploadFile;                                    // a File variable to temporarily store the received file
-
-const char *ssid = STASSID;
-const char *password = STAPSK;
-
-// Create WebServer object on port 80
-ESP8266WebServer server(80); 
-
-// Create an instance of the ESP8266WiFiMulti class, called 'wifiMulti'
-ESP8266WiFiMulti wifiMulti;    
-
-const char *OTAName = "ESP8266";            // A name and a password for the OTA service
-const char *OTAPassword = "esp8266";
-const char* mdnsName = "esp8266"; // Domain name for the mDNS responder
-
-// Create an instance of the WiFiUDP class to send and receive UDP messages
-WiFiUDP UDP;          
-         
-IPAddress timeServerIP;                       // The time.nist.gov NTP server's IP address
-const char* ntpServerName = "time.nist.gov";
-const int NTP_PACKET_SIZE = 48;               // NTP time stamp is in the first 48 bytes of the message
-byte packetBuffer[NTP_PACKET_SIZE];           // A buffer to hold incoming and outgoing packets
 
 // Generally, you should use "unsigned long" for variables that hold time
 // The value will quickly become too large for an int to store
@@ -92,6 +88,8 @@ void setup(void) {
 }
 
 const unsigned long intervalNTP = ONE_HOUR;     // Request NTP time every hour
+unsigned int dataCounter = 0;                  // Counter used to determine when to send out .csv temperature data
+unsigned int dataInterval = 24;                // Interval to determine when temperature data is sent out (units: hours)
 unsigned long prevNTP = 0;
 unsigned long lastNTPResponse = millis();
 uint32_t timeUNIX = 0;                      // The most recent timestamp received from the time server
@@ -108,6 +106,9 @@ void loop(void) {
   if (currentMillis - prevNTP > intervalNTP) { // Request the time from the time server every hour
     prevNTP = currentMillis;
     sendNTPpacket(timeServerIP);
+    if(dataCounter++ >= dataInterval) {
+      
+    }
   }
 
   uint32_t time = getTime();                   // Check if the time server has responded, if so, get the UNIX time
