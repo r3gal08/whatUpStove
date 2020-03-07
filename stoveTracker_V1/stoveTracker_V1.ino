@@ -47,7 +47,7 @@ ESP8266WiFiMulti wifiMulti;
 
 const char *OTAName = "ESP8266";            // A name and a password for the OTA service
 const char *OTAPassword = "esp8266";
-const char* mdnsName = "whatupstove?"; // Domain name for the mDNS responder
+const char* mdnsName = "esp8266"; // Domain name for the mDNS responder
 
 // Create an instance of the WiFiUDP class to send and receive UDP messages
 WiFiUDP UDP;          
