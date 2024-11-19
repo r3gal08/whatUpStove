@@ -1,1 +1,1 @@
-A program I worked on long ago and lost track of. I beleive it was to detect and notify myself/roommates if a stove burner was left on. It was an arduino program that utilzied the SPIFFs library to write data to a external SD card.
+A program I worked on long ago and lost track of. I believe it was to detect and notify myself/roommates if a stove burner was left on. It was an arduino program that utilized the SPIFFs library to write data to a external SD card and TWI to interact with a temperature sensor
